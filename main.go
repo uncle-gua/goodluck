@@ -55,7 +55,7 @@ func (g *GoodLuck) Go() error {
 	}()
 
 	duration := func() time.Duration {
-		x := rand.Intn(10) + 1
+		x := rand.Intn(config.Duration) + 1
 		return time.Duration(x) * time.Minute
 	}()
 

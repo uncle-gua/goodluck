@@ -13,6 +13,7 @@ type Config struct {
 	Amount    float64 `json:"amount"`
 	ApiKey    string  `json:"apiKey"`
 	ApiSecret string  `json:"apiSecret"`
+	Duration  int     `json:"duration"`
 }
 
 func init() {
