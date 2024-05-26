@@ -1,2 +1,2 @@
 # goodluck
-good luck
+Just show hand if you feel lucky, good luck!
