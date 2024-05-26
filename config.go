@@ -24,4 +24,5 @@ func init() {
 	if err := json.Unmarshal(b, &config); err != nil {
 		log.Fatal(err)
 	}
+	log.Info(config)
 }

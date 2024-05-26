@@ -18,15 +18,15 @@ func main() {
 	}
 }
 
-var goodluck = &GoodLuck{
-	client: futures.NewClient(config.ApiKey, config.ApiSecret),
-}
+var goodluck = &GoodLuck{}
 
 type GoodLuck struct {
 	client *futures.Client
 }
 
 func (g *GoodLuck) Go() error {
+	g.client = futures.NewClient(config.ApiKey, config.ApiSecret)
+
 	info, err := g.client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		log.Fatal(err)
@@ -45,13 +45,13 @@ func (g *GoodLuck) Go() error {
 		return symbols[x]
 	}()
 
-	side := func() futures.PositionSideType {
+	side1, side2, positionSide := func() (futures.SideType, futures.SideType, futures.PositionSideType) {
 		x := rand.Intn(2)
 		if x == 0 {
-			return futures.PositionSideTypeLong
+			return futures.SideTypeBuy, futures.SideTypeSell, futures.PositionSideTypeLong
 		}
 
-		return futures.PositionSideTypeShort
+		return futures.SideTypeSell, futures.SideTypeBuy, futures.PositionSideTypeShort
 	}()
 
 	duration := func() time.Duration {
@@ -59,9 +59,11 @@ func (g *GoodLuck) Go() error {
 		return time.Duration(x) * time.Minute
 	}()
 
+	log.Infof("duration: %s", duration)
+
 	price, err := g.getPrice(symbol)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	quantity, err := func(s string) (string, error) {
@@ -79,41 +81,41 @@ func (g *GoodLuck) Go() error {
 		return strconv.FormatFloat(config.Amount/price, 'f', p, 64), nil
 	}(price)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	_, err = g.client.NewCreateOrderService().
 		Symbol(symbol.Symbol).
 		Type(futures.OrderTypeMarket).
-		Side(futures.SideTypeBuy).
-		PositionSide(side).
+		Side(side1).
+		PositionSide(positionSide).
 		Quantity(quantity).
 		Do(context.Background())
 	if err != nil {
-		return nil
+		return err
 	}
 
-	log.Infof("BUY %s, price: %s, quantity: %s", side, price, quantity)
+	log.Infof("BUY %s, price: %s, quantity: %s", futures.PositionSideTypeLong, price, quantity)
 
 	time.Sleep(duration)
 
 	price, err = g.getPrice(symbol)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	_, err = g.client.NewCreateOrderService().
 		Symbol(symbol.Symbol).
 		Type(futures.OrderTypeMarket).
-		Side(futures.SideTypeSell).
-		PositionSide(side).
+		Side(side2).
+		PositionSide(positionSide).
 		Quantity(quantity).
 		Do(context.Background())
 	if err != nil {
-		return nil
+		return err
 	}
 
-	log.Infof("SELL %s, price: %s, quantity: %s", side, price, quantity)
+	log.Infof("SELL %s, price: %s, quantity: %s", futures.PositionSideTypeLong, price, quantity)
 
 	return nil
 }
