@@ -92,7 +92,7 @@ func (g *GoodLuck) Go() error {
 		Side(side1).
 		PositionSide(positionSide).
 		Quantity(quantity)
-	if err := g.excute(order1); err != nil {
+	if err := g.execute(order1); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (g *GoodLuck) Go() error {
 		Side(side2).
 		PositionSide(positionSide).
 		Quantity(quantity)
-	if err := g.excute(order2); err != nil {
+	if err := g.execute(order2); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (g *GoodLuck) Go() error {
 	return nil
 }
 
-func (g *GoodLuck) excute(order *futures.CreateOrderService) error {
+func (g *GoodLuck) execute(order *futures.CreateOrderService) error {
 	backoff := retry.WithMaxRetries(10, retry.WithJitter(10*time.Millisecond, retry.NewConstant(100*time.Millisecond)))
 	return retry.Do(context.Background(), backoff, func(ctx context.Context) error {
 		resp, err := order.Do(context.Background())
