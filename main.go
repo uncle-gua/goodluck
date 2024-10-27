@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/sethvargo/go-retry"
+	"github.com/uncle-gua/gobinance/common"
 	"github.com/uncle-gua/gobinance/futures"
 	"github.com/uncle-gua/log"
 )
@@ -84,18 +86,17 @@ func (g *GoodLuck) Go() error {
 		return err
 	}
 
-	_, err = g.client.NewCreateOrderService().
+	order1 := g.client.NewCreateOrderService().
 		Symbol(symbol.Symbol).
 		Type(futures.OrderTypeMarket).
 		Side(side1).
 		PositionSide(positionSide).
-		Quantity(quantity).
-		Do(context.Background())
-	if err != nil {
+		Quantity(quantity)
+	if err := g.excute(order1); err != nil {
 		return err
 	}
 
-	log.Infof("BUY %s, price: %s, quantity: %s", futures.PositionSideTypeLong, price, quantity)
+	log.Infof("%s %s, price: %s, quantity: %s", side1, positionSide, price, quantity)
 
 	time.Sleep(duration)
 
@@ -104,20 +105,39 @@ func (g *GoodLuck) Go() error {
 		return err
 	}
 
-	_, err = g.client.NewCreateOrderService().
+	order2 := g.client.NewCreateOrderService().
 		Symbol(symbol.Symbol).
 		Type(futures.OrderTypeMarket).
 		Side(side2).
 		PositionSide(positionSide).
-		Quantity(quantity).
-		Do(context.Background())
-	if err != nil {
+		Quantity(quantity)
+	if err := g.excute(order2); err != nil {
 		return err
 	}
 
-	log.Infof("SELL %s, price: %s, quantity: %s", futures.PositionSideTypeLong, price, quantity)
+	log.Infof("%s %s, price: %s, quantity: %s", side2, positionSide, price, quantity)
 
 	return nil
+}
+
+func (g *GoodLuck) excute(order *futures.CreateOrderService) error {
+	backoff := retry.WithMaxRetries(10, retry.WithJitter(10*time.Millisecond, retry.NewConstant(100*time.Millisecond)))
+	return retry.Do(context.Background(), backoff, func(ctx context.Context) error {
+		resp, err := order.Do(context.Background())
+		if err != nil {
+			if err, ok := err.(*common.APIError); ok {
+				if err.Code > -2000 {
+					return retry.RetryableError(err)
+				}
+			}
+
+			return err
+		}
+
+		log.Info(resp)
+
+		return nil
+	})
 }
 
 func (g *GoodLuck) getPrice(symbol futures.Symbol) (string, error) {
